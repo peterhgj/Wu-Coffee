@@ -1,334 +1,708 @@
+```html
 <!DOCTYPE html>
 <html lang="my">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WU COFFEE - Premium Digital Menu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNO Online - 4 Players</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
-        
-        :root {
-            --cafe-dark: #2d1e16;
-            --cafe-accent: #c68642;
-            --cafe-light: #fdfaf5;
-            --cafe-cream: #f5ebe0;
-        }
-
-        body { 
-            font-family: 'Pyidaungsu', sans-serif; 
-            background-color: var(--cafe-light);
-            color: var(--cafe-dark);
-            -webkit-tap-highlight-color: transparent; 
-            overflow-x: hidden;
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .category-active {
-            background-color: var(--cafe-accent);
+        body {
+            background-color: #111827;
             color: white;
-            border-color: var(--cafe-accent);
-            transform: scale(1.05);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Prevent scrolling, fixed layout */
+            overscroll-behavior-y: contain;
+            height: 100vh;
         }
 
-        .menu-card {
-            background: white;
-            border-radius: 1.25rem;
-            box-shadow: 0 2px 8px rgba(45, 30, 22, 0.05);
-            overflow: hidden;
-            transition: transform 0.2s ease;
+        /* Card Styles */
+        .uno-card {
+            min-width: 55px;
+            height: 80px;
+            border-radius: 8px;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+            border: 3px solid white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, margin 0.2s;
+            user-select: none;
+            flex-shrink: 0;
+            background-color: #2d3748;
         }
 
-        .menu-card:active { transform: scale(0.97); }
+        .uno-card:hover { transform: translateY(-8px); z-index: 20; }
+        .uno-card.disabled { opacity: 0.5; cursor: not-allowed; transform: none; border-color: #4b5563; }
 
-        .order-btn-fixed {
-            background: var(--cafe-dark);
-            box-shadow: 0 10px 30px rgba(45, 30, 22, 0.3);
-            border: 2px solid var(--cafe-accent);
+        .card-Red { background-color: #ef4444; }
+        .card-Blue { background-color: #3b82f6; }
+        .card-Green { background-color: #22c55e; }
+        .card-Yellow { background-color: #eab308; color: #1f2937; text-shadow: none; border-color: #fff; }
+        .card-Wild { background: conic-gradient(#ef4444 90deg, #3b82f6 90deg 180deg, #eab308 180deg 270deg, #22c55e 270deg 360deg); }
+
+        .card-small-text { font-size: 10px; margin-top: 2px; }
+        .card-symbol { font-size: 24px; }
+
+        /* Hand Layout */
+        .hand-container {
+            display: flex;
+            gap: -25px; /* Heavy overlap for mobile */
+            padding: 10px;
+            overflow-x: auto;
+            min-height: 100px;
+            align-items: flex-end;
+            scrollbar-width: none; /* Hide scrollbar Firefox */
+        }
+        .hand-container::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome */
+        
+        .hand-container .uno-card {
+            margin-right: -25px;
+            position: relative;
+        }
+        .hand-container .uno-card:last-child { margin-right: 0; }
+        .hand-container .uno-card:hover { margin-right: 5px; margin-left: 5px; }
+
+        /* Other Players Layout */
+        .opponent-area {
+            background-color: rgba(31, 41, 55, 0.6);
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            min-width: 100px;
+        }
+        
+        .opponent-mini-cards {
+            display: flex;
+            justify-content: center;
+            margin-top: 4px;
+        }
+        .mini-card {
+            width: 15px; height: 22px;
+            background-color: #ef4444; /* UNO back color */
+            border: 1px solid white;
+            border-radius: 2px;
+            margin-right: -8px;
         }
 
-        @keyframes slideUp { 
-            from { transform: translateY(100%); } 
-            to { transform: translateY(0); } 
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
         }
-        .animate-slide-up { animation: slideUp 0.25s ease-out; }
+        .hidden { display: none !important; }
+
+        .glow-active {
+            box-shadow: 0 0 15px 5px rgba(74, 222, 128, 0.3);
+            border-color: #4ade80 !important;
+            background-color: rgba(74, 222, 128, 0.1);
+        }
+
+        .direction-icon {
+            font-size: 24px;
+            color: #9ca3af;
+            transition: transform 0.5s;
+        }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="flex flex-col">
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <!-- Loading -->
+    <div id="loading-overlay" class="modal-overlay">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-yellow-400 mx-auto mb-4"></div>
+            <p class="text-yellow-400 font-bold">ချိတ်ဆက်နေပါသည်...</p>
+        </div>
+    </div>
 
-        // --- မင်းရဲ့ Telegram Bot အချက်အလက်များကို ဒီမှာထည့်ပါ ---
-        const TG_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"; 
-        const TG_CHAT_ID = "YOUR_CHAT_ID_HERE";     
-        // --------------------------------------------------
+    <!-- Main Menu -->
+    <div id="menu-modal" class="modal-overlay hidden">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl text-center max-w-sm w-full mx-4 border border-gray-700">
+            <h1 class="text-4xl font-bold text-yellow-400 mb-2">UNO <span class="text-white text-2xl">Party</span></h1>
+            <p class="text-gray-400 mb-6 text-sm">၄ ယောက်အထိ အတူဆော့နိုင်ပါပြီ</p>
+            
+            <input type="text" id="player-name" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:border-yellow-400" placeholder="သင့်နာမည် ထည့်ပါ">
 
-        const Icons = {
-            Plus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
-            Minus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
-            Cart: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>,
-            X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-            Coffee: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>,
-            Check: () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        };
+            <button id="btn-create-room" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg mb-4 transition">
+                အခန်းအသစ် ဖန်တီးမည် (Host)
+            </button>
+            
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <hr class="w-1/3 border-gray-600"><span class="text-gray-400 text-sm">သို့မဟုတ်</span><hr class="w-1/3 border-gray-600">
+            </div>
 
-        function App() {
-            const tableFromUrl = new URLSearchParams(window.location.search).get('table') || '';
-            const [activeTab, setActiveTab] = useState('COFFEE');
-            const [cart, setCart] = useState([]);
-            const [isCartOpen, setIsCartOpen] = useState(false);
-            const [customerInfo, setCustomerInfo] = useState({ name: '', table: tableFromUrl });
-            const [status, setStatus] = useState('idle');
+            <div class="flex gap-2">
+                <input type="text" id="room-code-input" class="w-2/3 bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-3 text-center uppercase font-bold tracking-widest text-lg" placeholder="အခန်း Code" maxlength="4">
+                <button id="btn-join-room" class="w-1/3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-2 rounded-lg transition">
+                    ဝင်မည်
+                </button>
+            </div>
+        </div>
+    </div>
 
-            const allMenus = [
-                // --- COFFEE ---
-                { id: 1, cat: 'COFFEE', n: 'Espresso', s: '濃縮咖啡', p: 80, ps: '60/80 B', img: "" },
-                { id: 2, cat: 'COFFEE', n: 'Macchiato', s: '瑪奇朵', p: 80, ps: '80 B', img: "" },
-                { id: 3, cat: 'COFFEE', n: 'Piccolo', s: '短笛', p: 80, ps: '80 B', img: "" },
-                { id: 4, cat: 'COFFEE', n: 'Cortado', s: '科爾塔多', p: 80, ps: '80 B', img: "" },
-                { id: 5, cat: 'COFFEE', n: 'Americano', s: '美式咖啡', p: 100, ps: '80/100 B', img: "" },
-                { id: 6, cat: 'COFFEE', n: 'Cappuccino', s: '卡布奇諾', p: 100, ps: '80/100 B', img: "" },
-                { id: 7, cat: 'COFFEE', n: 'Latte', s: '拿鐵', p: 100, ps: '80/100 B', img: "" },
-                { id: 8, cat: 'COFFEE', n: 'Mocha', s: '摩卡', p: 120, ps: '100/120 B', img: "" },
+    <!-- Waiting Room (Lobby) -->
+    <div id="waiting-modal" class="modal-overlay hidden">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl text-center max-w-sm w-full mx-4 border border-gray-700">
+            <h2 class="text-xl font-bold mb-2 text-gray-300">Room Code</h2>
+            <div id="display-room-code" class="text-5xl font-mono text-yellow-400 font-bold mb-4 tracking-widest bg-gray-900 py-3 rounded-lg">----</div>
+            <p class="text-sm text-gray-400 mb-4">ဒီ Code ကို သူငယ်ချင်းတွေကို ပေးပြီး ဝင်ခိုင်းပါ။ (အများဆုံး ၄ ယောက်)</p>
+            
+            <div class="bg-gray-700 rounded-lg p-3 mb-6 text-left">
+                <h3 class="font-bold text-sm text-gray-300 mb-2 border-b border-gray-600 pb-1">ဝင်ရောက်ပြီးသူများ:</h3>
+                <ul id="waiting-player-list" class="space-y-1 text-white font-medium">
+                    <!-- Players listed here -->
+                </ul>
+            </div>
 
-                // --- NON-COFFEE ---
-                { id: 10, cat: 'NON-COFFEE', n: 'Chocolate', s: '巧克力', p: 120, ps: '100/120 B', img: "" },
-                { id: 11, cat: 'NON-COFFEE', n: 'Matcha Latte', s: '抹茶拿鐵', p: 120, ps: '100/120 B', img: "" },
-                { id: 12, cat: 'NON-COFFEE', n: 'Matcha Coco', s: '抹茶可可', p: 120, ps: '120 B', img: "" },
-                { id: 13, cat: 'NON-COFFEE', n: 'Matcha Orange', s: '抹茶橙', p: 120, ps: '120 B', img: "" },
-                { id: 14, cat: 'NON-COFFEE', n: 'Matcha Cheese', s: '抹茶芝士', p: 120, ps: '120 B', img: "" },
-                { id: 15, cat: 'NON-COFFEE', n: 'Matcha Lemon', s: '抹茶檸檬', p: 120, ps: '120 B', img: "" },
-                { id: 16, cat: 'NON-COFFEE', n: 'Lime Honey', s: '青檸蜂蜜', p: 120, ps: '120 B', img: "" },
+            <!-- Only Host sees this button -->
+            <button id="btn-start-game" class="hidden w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-4 rounded-lg transition">
+                ဂိမ်းစမည် (Start Game)
+            </button>
+            <p id="waiting-text-nonhost" class="text-yellow-400 font-bold hidden animate-pulse">Host မှ ဂိမ်းစတင်ရန် စောင့်နေပါသည်...</p>
+        </div>
+    </div>
 
-                // --- TEA SERIES ---
-                { id: 17, cat: 'TEA', n: 'English Breakfast', s: '英式早餐', p: 60, ps: '60 B', img: "" },
-                { id: 18, cat: 'TEA', n: 'Earl Grey', s: '伯爵茶', p: 60, ps: '60 B', img: "" },
-                { id: 19, cat: 'TEA', n: 'Green Tea Jasmine', s: '茉莉綠茶', p: 60, ps: '60 B', img: "" },
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal-overlay hidden" style="z-index: 100;">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl text-center max-w-xs w-full mx-4 border border-gray-600">
+            <h3 id="alert-title" class="text-xl font-bold mb-2 text-yellow-400">အသိပေးချက်</h3>
+            <p id="alert-text" class="text-md mb-6 text-white">Message</p>
+            <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-8 rounded-lg font-bold w-full">အိုကေ</button>
+        </div>
+    </div>
 
-                // --- SIGNATURE ---
-                { id: 20, cat: 'SIGNATURE', n: 'Wu Coffee', s: '悟咖啡', p: 120, ps: '120 B', img: "" },
-                { id: 21, cat: 'SIGNATURE', n: 'Dirty Latte', s: '骯髒拿鐵', p: 120, ps: '120 B', img: "" },
-                { id: 22, cat: 'SIGNATURE', n: 'Nutty Latte', s: '堅果拿鐵', p: 120, ps: '120 B', img: "" },
-                { id: 23, cat: 'SIGNATURE', n: 'Caramel Latte', s: '焦糖拿鐵', p: 120, ps: '120 B', img: "" },
-                { id: 24, cat: 'SIGNATURE', n: 'Einspanner', s: '冰叔手', p: 120, ps: '120 B', img: "" },
-                { id: 25, cat: 'SIGNATURE', n: 'Santorini Lemonade', s: '聖托里尼', p: 120, ps: '120 B', img: "" },
-                { id: 26, cat: 'SIGNATURE', n: 'Red Eye', s: '紅眼', p: 120, ps: '120 B', img: "" },
-                { id: 27, cat: 'SIGNATURE', n: 'Strawberry Coffee', s: '草莓咖啡', p: 120, ps: '120 B', img: "" },
+    <!-- Color Picker -->
+    <div id="color-modal" class="modal-overlay hidden" style="z-index: 60;">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl text-center max-w-xs w-full mx-4">
+            <h3 class="text-lg font-bold mb-4 text-white">အရောင်ရွေးပါ</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <button class="h-20 rounded-xl border-4 border-white bg-red-500 hover:scale-105" onclick="selectWildColor('Red')"></button>
+                <button class="h-20 rounded-xl border-4 border-white bg-blue-500 hover:scale-105" onclick="selectWildColor('Blue')"></button>
+                <button class="h-20 rounded-xl border-4 border-white bg-green-500 hover:scale-105" onclick="selectWildColor('Green')"></button>
+                <button class="h-20 rounded-xl border-4 border-white bg-yellow-500 hover:scale-105" onclick="selectWildColor('Yellow')"></button>
+            </div>
+        </div>
+    </div>
 
-                // --- COLD BREW & DRIP ---
-                { id: 28, cat: 'SPECIAL', n: 'Cold Brew', s: '冷萃', p: 120, ps: '120 B', img: "" },
-                { id: 29, cat: 'SPECIAL', n: 'Apple Cold Brew', s: '苹果冷萃', p: 120, ps: '120 B', img: "" },
-                { id: 30, cat: 'SPECIAL', n: 'Honey Lime CB', s: '蜂蜜冷萃', p: 120, ps: '120 B', img: "" },
-                { id: 31, cat: 'SPECIAL', n: 'Tonic Cold Brew', s: '通力冷萃', p: 120, ps: '120 B', img: "" },
-                { id: 32, cat: 'SPECIAL', n: 'Ginger Cold Brew', s: '姜冷萃', p: 120, ps: '120 B', img: "" },
-                { id: 33, cat: 'SPECIAL', n: 'Hand Drip', s: '手冲', p: 180, ps: '180 B', img: "" },
-                { id: 34, cat: 'SPECIAL', n: 'Appresso', s: '濃縮咖啡', p: 120, ps: '120 B', img: "" },
-                { id: 35, cat: 'SPECIAL', n: 'Orpresso', s: '奥普雷索', p: 120, ps: '120 B', img: "" },
-                { id: 36, cat: 'SPECIAL', n: 'Tonpresso', s: '通普雷索', p: 120, ps: '120 B', img: "" },
+    <!-- GAME UI -->
+    <div id="game-ui" class="hidden flex-col h-full w-full">
+        <!-- Top Bar -->
+        <header class="flex justify-between items-center p-2 bg-gray-900 border-b border-gray-700">
+            <div class="text-xs">Room: <span id="ui-room-code" class="font-bold text-yellow-400"></span></div>
+            <div id="turn-banner" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-700 transition-colors">စောင့်နေဆဲ...</div>
+            <button onclick="leaveRoom()" class="text-red-400 hover:text-red-300 text-xs font-bold px-2 py-1 bg-gray-800 rounded">ထွက်မည်</button>
+        </header>
 
-                // --- SMOOTHIES ---
-                { id: 40, cat: 'SMOOTHIES', n: 'Strawberry Smoothie', s: '草莓昔', p: 140, ps: '140 B', img: "" },
-                { id: 41, cat: 'SMOOTHIES', n: 'Mango Smoothie', s: '芒果昔', p: 140, ps: '140 B', img: "" },
-                { id: 42, cat: 'SMOOTHIES', n: 'Blueberry Smoothie', s: '藍莓昔', p: 140, ps: '140 B', img: "" },
-                { id: 43, cat: 'SMOOTHIES', n: 'Mixberry Smoothie', s: '综合莓昔', p: 140, ps: '140 B', img: "" },
-                { id: 44, cat: 'SMOOTHIES', n: 'Peach Smoothie', s: '桃子昔', p: 140, ps: '140 B', img: "" },
-                { id: 45, cat: 'SMOOTHIES', n: 'Kiwi Smoothie', s: '奇异果昔', p: 140, ps: '140 B', img: "" },
-                { id: 46, cat: 'SMOOTHIES', n: 'Lychee Smoothie', s: '荔枝昔', p: 140, ps: '140 B', img: "" },
-                { id: 47, cat: 'SMOOTHIES', n: 'Banana Smoothie', s: '香蕉昔', p: 140, ps: '140 B', img: "" },
-                { id: 48, cat: 'SMOOTHIES', n: 'Yogurt Smoothie', s: '酸奶昔', p: 140, ps: '140 B', img: "" },
+        <!-- Play Area (Middle) -->
+        <div class="flex-grow flex flex-col justify-between p-2 relative overflow-hidden">
+            
+            <!-- Opponents Layout (Top & Sides) -->
+            <div class="flex justify-around w-full mt-2" id="opponents-container">
+                <!-- Dynamically populated -->
+            </div>
 
-                // --- FRAPPE ---
-                { id: 50, cat: 'FRAPPE', n: 'Cappuccino Frappe', s: '卡布奇諾', p: 140, ps: '140 B', img: "" },
-                { id: 51, cat: 'FRAPPE', n: 'Mocha Frappe', s: '摩卡冰沙', p: 140, ps: '140 B', img: "" },
-                { id: 52, cat: 'FRAPPE', n: 'Oreo Frappe', s: '奥利奥', p: 140, ps: '140 B', img: "" },
-                { id: 53, cat: 'FRAPPE', n: 'Vanilla Frappe', s: '香草冰沙', p: 140, ps: '140 B', img: "" },
-                { id: 54, cat: 'FRAPPE', n: 'Caramel Frappe', s: '焦糖冰沙', p: 140, ps: '140 B', img: "" },
-                { id: 55, cat: 'FRAPPE', n: 'Hazelnut Frappe', s: '榛果冰沙', p: 140, ps: '140 B', img: "" },
-                { id: 56, cat: 'FRAPPE', n: 'Green Tea Frappe', s: '綠茶冰沙', p: 140, ps: '140 B', img: "" },
-                { id: 57, cat: 'FRAPPE', n: 'Chocolate Frappe', s: '巧克力', p: 140, ps: '140 B', img: "" },
+            <!-- Center Table -->
+            <div class="flex flex-col items-center justify-center relative my-auto">
+                <!-- Direction Indicator -->
+                <div id="direction-indicator" class="absolute top-0 text-gray-500 text-sm font-bold flex items-center gap-2">
+                    <span id="dir-left" class="direction-icon">⟵</span>
+                    လှည့်ပတ်မှု
+                    <span id="dir-right" class="direction-icon">⟶</span>
+                </div>
 
-                // --- MILKSHAKE ---
-                { id: 60, cat: 'MILKSHAKE', n: 'Strawberry Milk', s: '草莓奶昔', p: 120, ps: '120 B', img: "" },
-                { id: 61, cat: 'MILKSHAKE', n: 'Blueberry Milk', s: '藍莓奶昔', p: 120, ps: '120 B', img: "" },
-                { id: 62, cat: 'MILKSHAKE', n: 'Chocolate Milk', s: '巧克力', p: 120, ps: '120 B', img: "" },
-                { id: 63, cat: 'MILKSHAKE', n: 'Mango Milk', s: '芒果奶昔', p: 120, ps: '120 B', img: "" },
-                { id: 64, cat: 'MILKSHAKE', n: 'Banana Milk', s: '香蕉奶昔', p: 120, ps: '120 B', img: "" },
-                { id: 65, cat: 'MILKSHAKE', n: 'Oreo Milk', s: '奥利奥', p: 120, ps: '120 B', img: "" },
-
-                // --- SODA & TEA ---
-                { id: 70, cat: 'SODA', n: 'Lime Soda', s: '青檸蘇打', p: 120, ps: '120 B', img: "" },
-                { id: 71, cat: 'SODA', n: 'Kiwi Soda', s: '奇异果', p: 120, ps: '120 B', img: "" },
-                { id: 72, cat: 'SODA', n: 'Peach Soda', s: '桃子蘇打', p: 120, ps: '120 B', img: "" },
-                { id: 73, cat: 'SODA', n: 'Passion Soda', s: '百香蘇打', p: 120, ps: '120 B', img: "" },
-                { id: 74, cat: 'SODA', n: 'Mango Soda', s: '芒果蘇打', p: 120, ps: '120 B', img: "" },
-                { id: 75, cat: 'SODA', n: 'Blue Paradise', s: '藍色天堂', p: 120, ps: '120 B', img: "" },
-                { id: 76, cat: 'SODA', n: 'Mojito Soda', s: '莫吉托', p: 120, ps: '120 B', img: "" },
-                { id: 77, cat: 'TEA_FRUIT', n: 'Ice Lemon Tea', s: '柠檬茶', p: 120, ps: '120 B', img: "" },
-                { id: 78, cat: 'TEA_FRUIT', n: 'Ice Peach Tea', s: '桃子茶', p: 120, ps: '120 B', img: "" },
-                { id: 79, cat: 'TEA_FRUIT', n: 'Ice Passion Tea', s: '百香果', p: 120, ps: '120 B', img: "" },
-                { id: 80, cat: 'TEA_FRUIT', n: 'Ice Orange Tea', s: '橙茶', p: 120, ps: '120 B', img: "" },
-                { id: 81, cat: 'TEA_FRUIT', n: 'Ice Mango Tea', s: '芒果茶', p: 120, ps: '120 B', img: "" },
-                { id: 82, cat: 'TEA_FRUIT', n: 'Mixfruit Tea', s: '综合水果', p: 120, ps: '120 B', img: "" }
-            ];
-
-            const addToCart = (item) => {
-                setCart(prev => {
-                    const existing = prev.find(i => i.id === item.id);
-                    if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
-                    return [...prev, { ...item, qty: 1 }];
-                });
-            };
-
-            const removeFromCart = (id) => {
-                setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty - 1 } : i).filter(i => i.qty > 0));
-            };
-
-            const sendOrder = async () => {
-                if (cart.length === 0 || !customerInfo.name || !customerInfo.table) return;
-                setStatus('sending');
-                const total = cart.reduce((sum, i) => sum + (i.p * i.qty), 0);
-                let message = `☕ *WU COFFEE - အော်ဒါအသစ်*\n━━━━━━━━━━━━━━━\n👤 နာမည်: ${customerInfo.name}\n📍 စားပွဲနံပါတ်: ${customerInfo.table}\n━━━━━━━━━━━━━━━\n`;
-                cart.forEach(item => { message += `• ${item.n} (${item.qty} ခွက်) - ${item.p * item.qty} B\n`; });
-                message += `━━━━━━━━━━━━━━━\n💰 *စုစုပေါင်း: ${total} B*`;
-
-                try {
-                    const res = await fetch(`https://api.telegram.org/bot${8722217772:AAELMPB5KSVgaip-aK9LdXMn3rn7U3DOxgI}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: 7786116951, text: message, parse_mode: 'Markdown' })
-                    });
-                    if (res.ok) {
-                        setStatus('success');
-                        setCart([]);
-                        setTimeout(() => { setStatus('idle'); setIsCartOpen(false); }, 3000);
-                    } else { setStatus('error'); }
-                } catch { setStatus('error'); }
-            };
-
-            return (
-                <div className="min-h-screen pb-48">
-                    {/* Header */}
-                    <header className="bg-[#2d1e16] text-white pt-10 pb-12 px-6 text-center rounded-b-[2.5rem] shadow-lg relative border-b-4 border-[#c68642]">
-                        <div className="w-16 h-16 bg-[#c68642] rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-bold border-2 border-white shadow-inner">悟</div>
-                        <h1 className="text-2xl font-black tracking-widest uppercase">WU COFFEE</h1>
-                        <p className="text-[9px] text-white/50 font-bold uppercase tracking-widest">Premium Menu</p>
-                    </header>
-
-                    <main className="max-w-xl mx-auto px-4 -mt-6">
-                        {/* Category Tabs */}
-                        <div className="flex overflow-x-auto gap-2 py-4 no-scrollbar sticky top-0 bg-[#fdfaf5]/90 backdrop-blur-md z-40 mb-4 px-1 border-b border-stone-100">
-                            {[
-                                {k:'COFFEE', l:'Coffee'}, {k:'SIGNATURE', l:'Signature'}, {k:'NON-COFFEE', l:'Non-Coffee'},
-                                {k:'TEA', l:'Tea'}, {k:'SMOOTHIES', l:'Smoothies'}, {k:'FRAPPE', l:'Frappe'},
-                                {k:'MILKSHAKE', l:'Milkshake'}, {k:'SODA', l:'Soda'}, {k:'TEA_FRUIT', l:'Fruit Tea'}, {k:'SPECIAL', l:'Special'}
-                            ].map(cat => (
-                                <button key={cat.k} onClick={() => setActiveTab(cat.k)} className={`px-4 py-2 rounded-full text-[10px] font-black tracking-widest border whitespace-nowrap transition-all shadow-sm ${activeTab === cat.k ? 'category-active' : 'bg-white text-stone-400 border-stone-200'}`}>{cat.l}</button>
-                            ))}
-                        </div>
-
-                        {/* Menu Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {allMenus.filter(i => i.cat === activeTab).map(item => (
-                                <div key={item.id} className="menu-card p-3.5 flex gap-4 items-center border border-stone-100 active:scale-95 transition-transform">
-                                    <div className="w-12 h-12 bg-[#f5ebe0] rounded-2xl flex items-center justify-center text-[#c68642] shrink-0 border border-white overflow-hidden">
-                                        {item.img ? <img src={item.img} className="w-full h-full object-cover" /> : <Icons.Coffee />}
-                                    </div>
-                                    <div className="flex-grow min-w-0">
-                                        <h3 className="font-bold text-sm text-[#2d1e16] truncate">{item.n}</h3>
-                                        <p className="text-[10px] text-stone-400 font-bold">{item.s}</p>
-                                        <p className="text-[#c68642] font-black text-xs mt-1">{item.ps}</p>
-                                    </div>
-                                    <button onClick={() => addToCart(item)} className="w-9 h-9 bg-[#2d1e16] text-white rounded-full flex items-center justify-center shadow-md active:bg-[#c68642] shrink-0 transition-colors"><Icons.Plus /></button>
-                                </div>
-                            ))}
-                        </div>
-                    </main>
-
-                    {/* Fixed Order Button */}
-                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-50">
-                        <button onClick={() => setIsCartOpen(true)} className="order-btn-fixed w-full py-4 rounded-full flex items-center justify-center gap-4 text-white active:scale-95 transition relative">
-                            <Icons.Cart />
-                            <span className="text-sm font-black uppercase tracking-widest">မှာထားသည်များ ကြည့်မည်</span>
-                            {cart.length > 0 && <span className="absolute -top-3 -right-1 bg-red-600 text-white text-[11px] font-bold w-7 h-7 rounded-full flex items-center justify-center border-2 border-white animate-bounce shadow-lg">{cart.reduce((s,i)=>s+i.qty,0)}</span>}
-                        </button>
+                <div class="flex justify-center items-center gap-6 mt-6 bg-gray-800/80 p-4 rounded-2xl border border-gray-700 shadow-lg relative">
+                    <!-- Current Color Banner -->
+                    <div id="color-indicator" class="absolute -top-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow">
+                        အရောင်: -
                     </div>
 
-                    {/* Cart Modal */}
-                    {isCartOpen && (
-                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-end justify-center px-4 pb-8">
-                            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-6 shadow-2xl flex flex-col animate-slide-up max-h-[85vh] overflow-hidden">
-                                <div className="flex justify-between items-center mb-6 px-2 shrink-0">
-                                    <h3 className="text-lg font-black uppercase text-[#2d1e16] tracking-tighter flex items-center gap-2">
-                                        <Icons.Cart /> Your Order
-                                    </h3>
-                                    <button onClick={() => setIsCartOpen(false)} className="text-stone-300 p-2 hover:text-[#2d1e16]"><Icons.X /></button>
-                                </div>
-
-                                {status === 'success' ? (
-                                    <div className="text-center py-16"><div className="flex justify-center mb-4"><Icons.Check /></div><h4 className="font-black text-xl text-[#2d1e16]">အော်ဒါတင်ပြီးပါပြီ</h4></div>
-                                ) : (
-                                    <div className="flex flex-col h-full overflow-hidden">
-                                        {/* Scrollable Item List */}
-                                        <div className="flex-grow overflow-y-auto no-scrollbar pb-4">
-                                            {cart.length === 0 ? (
-                                                <p className="text-center text-stone-400 py-8">ဘာမှမမှာရသေးပါ</p>
-                                            ) : (
-                                                cart.map(item => (
-                                                    <div key={item.id} className="flex justify-between items-center mb-4 bg-stone-50 p-3 rounded-2xl border border-stone-100">
-                                                        <div>
-                                                            <h4 className="font-bold text-[#2d1e16] text-sm">{item.n}</h4>
-                                                            <p className="text-[#c68642] font-black text-[10px]">{item.p} B</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3 bg-white px-2 py-1 rounded-full border border-stone-200">
-                                                            <button onClick={() => removeFromCart(item.id)} className="w-6 h-6 bg-[#f5ebe0] text-[#2d1e16] rounded-full flex items-center justify-center"><Icons.Minus /></button>
-                                                            <span className="font-black text-sm w-4 text-center">{item.qty}</span>
-                                                            <button onClick={() => addToCart(item)} className="w-6 h-6 bg-[#2d1e16] text-white rounded-full flex items-center justify-center"><Icons.Plus /></button>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-
-                                        {/* Input Fields Aligned */}
-                                        <div className="pt-4 border-t border-stone-100 shrink-0">
-                                            <div className="flex gap-3 mb-4">
-                                                <div className="flex-1">
-                                                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-2 mb-1 block">နာမည် (Name)</label>
-                                                    <input type="text" placeholder="သင့်နာမည်" className="w-full bg-[#f5ebe0]/50 border-none rounded-2xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#c68642] text-sm font-bold" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-2 mb-1 block">စားပွဲနံပါတ် (Table)</label>
-                                                    <input type="text" placeholder="ဝိုင်းနံပါတ်..." className="w-full bg-[#f5ebe0]/50 border-none rounded-2xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#c68642] text-sm font-bold" value={customerInfo.table} onChange={e => setCustomerInfo({...customerInfo, table: e.target.value})} />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-between items-end mb-4 px-2">
-                                                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Grand Total</span>
-                                                <span className="text-3xl font-black text-[#2d1e16]">{cart.reduce((s,i) => s + (i.p * i.qty), 0)} <span className="text-base text-[#c68642]">B</span></span>
-                                            </div>
-
-                                            <button onClick={sendOrder} disabled={cart.length === 0 || !customerInfo.name || !customerInfo.table || status === 'sending'} className="w-full bg-[#2d1e16] text-white py-4 rounded-full font-black uppercase tracking-widest disabled:opacity-50 transition active:scale-95">
-                                                {status === 'sending' ? 'Sending...' : 'Confirm & Send to Telegram'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                    <!-- Draw Pile -->
+                    <div class="flex flex-col items-center">
+                        <div id="draw-pile" class="uno-card bg-gray-900 border-gray-600 hover:scale-105" onclick="drawCard()">
+                            <span class="text-yellow-500 font-bold text-lg">ဆွဲမည်</span>
                         </div>
-                    )}
+                        <span id="deck-count" class="text-[10px] text-gray-400 mt-1">အကျန်: 0</span>
+                    </div>
+
+                    <!-- Play Pile -->
+                    <div class="flex flex-col items-center">
+                        <div id="top-card" class="uno-card card-Red">
+                            <span class="card-symbol">-</span>
+                        </div>
+                        <span class="text-[10px] text-gray-400 mt-1">အလယ်ဖဲ</span>
+                    </div>
                 </div>
-            );
+            </div>
+            
+            <!-- Draw/Pass Button Area (Above My Hand) -->
+            <div class="flex justify-center mb-2 h-8">
+                <button id="btn-pass" onclick="passTurn()" class="hidden bg-gray-600 hover:bg-gray-500 text-white px-6 py-1 rounded-full text-sm font-bold shadow-md">
+                    မချတော့ပါ (Pass)
+                </button>
+            </div>
+        </div>
+
+        <!-- My Area (Bottom Fixed) -->
+        <div id="my-area" class="bg-gray-800 border-t border-gray-700 p-2 pb-6">
+            <div class="flex justify-between items-center mb-1 px-2">
+                <h2 id="my-name" class="text-sm font-bold text-white truncate max-w-[60%]">သင်</h2>
+                <span id="my-count" class="bg-gray-900 px-2 py-1 rounded text-xs font-bold text-green-400">ဖဲချပ်: 0</span>
+            </div>
+            <div id="my-hand" class="hand-container bg-gray-900/50 rounded-lg">
+                <!-- Cards injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'uno-4p-app';
+        let app, auth, db;
+        
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch(e) {
+            console.error(e);
+            alert("Firebase Error. Check console.");
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // Global State
+        let currentUser = null;
+        let currentRoomId = null;
+        let unsubscribeRoom = null;
+        let gameState = null;
+        let pendingWildCard = null; 
+        let hasDrawnCardThisTurn = false; // To track if user drew a card and can pass
+
+        // --- Auth ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('menu-modal').classList.remove('hidden');
+            }
+        });
+
+        initAuth();
+
+        // --- Deck logic ---
+        function generateDeck() {
+            let d = [];
+            const colors = ['Red', 'Green', 'Blue', 'Yellow'];
+            colors.forEach(c => {
+                d.push({ id: crypto.randomUUID(), type: 'number', color: c, value: '0', display: '0' });
+                for(let i=1; i<=9; i++) {
+                    d.push({ id: crypto.randomUUID(), type: 'number', color: c, value: i.toString(), display: i.toString() });
+                    d.push({ id: crypto.randomUUID(), type: 'number', color: c, value: i.toString(), display: i.toString() });
+                }
+                for(let i=0; i<2; i++) {
+                    d.push({ id: crypto.randomUUID(), type: 'skip', color: c, value: 'Skip', display: '⊘' });
+                    d.push({ id: crypto.randomUUID(), type: 'reverse', color: c, value: 'Reverse', display: '⇄' });
+                    d.push({ id: crypto.randomUUID(), type: '+2', color: c, value: '+2', display: '+2' });
+                }
+            });
+            for(let i=0; i<4; i++) {
+                d.push({ id: crypto.randomUUID(), type: 'wild', color: 'Wild', value: 'W', display: 'W' });
+                d.push({ id: crypto.randomUUID(), type: 'wild+4', color: 'Wild', value: 'W+4', display: '+4' });
+            }
+            return d.sort(() => Math.random() - 0.5);
+        }
+
+        function getRoomRef(roomId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'uno_rooms', roomId);
+        }
+
+        // --- Room Actions ---
+        window.createRoom = async () => {
+            const name = document.getElementById('player-name').value.trim() || "Host";
+            const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            
+            const newState = {
+                roomId: roomId,
+                hostId: currentUser.uid,
+                status: 'waiting',
+                players: { [currentUser.uid]: { name: name } },
+                playerIds: [currentUser.uid],
+                turnIndex: 0,
+                direction: 1, // 1 = clockwise, -1 = counter-clockwise
+                deck: [],
+                hands: {},
+                topCard: null,
+                currentWildColor: null,
+                winner: null,
+                lastActionMsg: "အခန်း ဖန်တီးလိုက်ပါပြီ။"
+            };
+
+            await setDoc(getRoomRef(roomId), newState);
+            currentRoomId = roomId;
+            listenToRoom(roomId);
+        };
+
+        window.joinRoom = async () => {
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            const name = document.getElementById('player-name').value.trim() || "Player";
+            
+            if (code.length !== 4) return showAlert("အမှား", "Code မှားယွင်းနေပါသည်။");
+            
+            const roomRef = getRoomRef(code);
+            const snap = await getDoc(roomRef);
+
+            if (!snap.exists()) return showAlert("အမှား", "အခန်း မရှိပါ။");
+            
+            let state = snap.data();
+            
+            if (state.status !== 'waiting') return showAlert("အမှား", "ဂိမ်းစတင်သွားပါပြီ။ ဝင်၍မရတော့ပါ။");
+            if (state.playerIds.length >= 4 && !state.playerIds.includes(currentUser.uid)) return showAlert("အမှား", "လူ ၄ ယောက် ပြည့်သွားပါပြီ။");
+
+            if (!state.playerIds.includes(currentUser.uid)) {
+                state.playerIds.push(currentUser.uid);
+                state.players[currentUser.uid] = { name: name };
+                await setDoc(roomRef, state);
+            }
+            
+            currentRoomId = code;
+            listenToRoom(code);
+        };
+
+        window.startGame = async () => {
+            if (gameState.playerIds.length < 2) return showAlert("အမှား", "အနည်းဆုံး ၂ ယောက် ရှိမှ စ၍ရပါမည်။");
+            
+            let state = JSON.parse(JSON.stringify(gameState));
+            let deck = generateDeck();
+            
+            // Deal 7 cards to everyone
+            state.playerIds.forEach(uid => {
+                state.hands[uid] = deck.splice(0, 7);
+            });
+            
+            // First card logic (must be number)
+            let topCardIndex = deck.findIndex(c => c.type === 'number');
+            state.topCard = deck.splice(topCardIndex, 1)[0];
+            state.currentWildColor = state.topCard.color;
+            state.deck = deck;
+            state.status = 'playing';
+            state.lastActionMsg = "ဂိမ်းစတင်ပါပြီ!";
+
+            await setDoc(getRoomRef(currentRoomId), state);
+        };
+
+        window.leaveRoom = async () => {
+            if(unsubscribeRoom) unsubscribeRoom();
+            
+            // Clean up room if host leaves empty room (simplified)
+            if (gameState && gameState.hostId === currentUser.uid && gameState.playerIds.length === 1) {
+                await deleteDoc(getRoomRef(currentRoomId));
+            }
+            
+            currentRoomId = null;
+            gameState = null;
+            document.getElementById('game-ui').classList.add('hidden');
+            document.getElementById('waiting-modal').classList.add('hidden');
+            document.getElementById('menu-modal').classList.remove('hidden');
+        };
+
+        function listenToRoom(roomId) {
+            document.getElementById('menu-modal').classList.add('hidden');
+            
+            unsubscribeRoom = onSnapshot(getRoomRef(roomId), (docSnap) => {
+                if (!docSnap.exists()) {
+                    leaveRoom();
+                    showAlert("အသိပေးချက်", "အခန်း ပိတ်သွားပါပြီ။");
+                    return;
+                }
+                gameState = docSnap.data();
+                renderUI();
+            }, (err) => { console.error(err); });
+        }
+
+        // --- Render UI ---
+        function renderUI() {
+            if (gameState.status === 'waiting') {
+                renderLobby();
+            } else {
+                renderGame();
+            }
+        }
+
+        function renderLobby() {
+            document.getElementById('waiting-modal').classList.remove('hidden');
+            document.getElementById('display-room-code').textContent = gameState.roomId;
+            
+            const list = document.getElementById('waiting-player-list');
+            list.innerHTML = '';
+            gameState.playerIds.forEach((uid, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center gap-2';
+                li.innerHTML = `
+                    <span class="bg-gray-600 px-2 py-0.5 rounded text-xs">P${index+1}</span> 
+                    ${gameState.players[uid].name} 
+                    ${uid === gameState.hostId ? '<span class="text-yellow-400 text-xs">👑</span>' : ''}
+                `;
+                list.appendChild(li);
+            });
+
+            const isHost = gameState.hostId === currentUser.uid;
+            document.getElementById('btn-start-game').classList.toggle('hidden', !isHost);
+            document.getElementById('waiting-text-nonhost').classList.toggle('hidden', isHost);
+        }
+
+        function renderGame() {
+            document.getElementById('waiting-modal').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+
+            document.getElementById('ui-room-code').textContent = gameState.roomId;
+
+            const myTurn = gameState.playerIds[gameState.turnIndex] === currentUser.uid;
+            hasDrawnCardThisTurn = hasDrawnCardThisTurn && myTurn; // Reset if not my turn
+            
+            // Turn Banner
+            const turnBanner = document.getElementById('turn-banner');
+            if (gameState.winner) {
+                turnBanner.textContent = "ဂိမ်းပြီးသွားပါပြီ!";
+                turnBanner.className = "px-4 py-1 rounded-full text-xs font-bold bg-yellow-600 text-white";
+                if(gameState.winner === currentUser.uid) showAlert("🏆 နိုင်ပါပြီ!", "သင် အနိုင်ရသွားပါပြီ!");
+            } else {
+                const activePlayerName = gameState.players[gameState.playerIds[gameState.turnIndex]].name;
+                turnBanner.textContent = myTurn ? "သင့်အလှည့်ပါ" : `${activePlayerName} အလှည့်...`;
+                turnBanner.className = `px-4 py-1 rounded-full text-xs font-bold ${myTurn ? 'bg-green-600 shadow-[0_0_10px_#22c55e]' : 'bg-gray-700'}`;
+            }
+
+            // Direction indicator
+            const dirLeft = document.getElementById('dir-left');
+            const dirRight = document.getElementById('dir-right');
+            if (gameState.direction === 1) {
+                dirRight.style.color = '#facc15'; dirLeft.style.color = '#4b5563';
+                dirRight.style.transform = 'scale(1.2)'; dirLeft.style.transform = 'scale(1)';
+            } else {
+                dirLeft.style.color = '#facc15'; dirRight.style.color = '#4b5563';
+                dirLeft.style.transform = 'scale(1.2)'; dirRight.style.transform = 'scale(1)';
+            }
+
+            // Render Opponents
+            const oppContainer = document.getElementById('opponents-container');
+            oppContainer.innerHTML = '';
+            
+            // Order opponents relative to me
+            const myIndex = gameState.playerIds.indexOf(currentUser.uid);
+            let orderedIds = [];
+            for(let i=1; i<gameState.playerIds.length; i++) {
+                orderedIds.push(gameState.playerIds[(myIndex + i) % gameState.playerIds.length]);
+            }
+
+            orderedIds.forEach(uid => {
+                const isOppTurn = gameState.playerIds[gameState.turnIndex] === uid;
+                const handSize = gameState.hands[uid].length;
+                
+                const oppDiv = document.createElement('div');
+                oppDiv.className = `opponent-area ${isOppTurn ? 'glow-active' : ''}`;
+                
+                // Draw mini cards
+                let miniCardsHTML = '';
+                for(let c=0; c<Math.min(handSize, 7); c++) {
+                    miniCardsHTML += `<div class="mini-card"></div>`;
+                }
+                if(handSize > 7) miniCardsHTML += `<span class="text-[10px] ml-2 text-white">+${handSize-7}</span>`;
+
+                oppDiv.innerHTML = `
+                    <div class="text-xs font-bold text-gray-200 truncate w-20">${gameState.players[uid].name}</div>
+                    <div class="text-[10px] text-yellow-400 mt-1">${handSize} ကတ်</div>
+                    <div class="opponent-mini-cards">${miniCardsHTML}</div>
+                `;
+                oppContainer.appendChild(oppDiv);
+            });
+
+            // Center Board
+            document.getElementById('deck-count').textContent = `အကျန်: ${gameState.deck.length}`;
+            
+            const topCardEl = document.getElementById('top-card');
+            topCardEl.className = `uno-card card-${gameState.topCard.color === 'Wild' ? gameState.currentWildColor : gameState.topCard.color}`;
+            topCardEl.innerHTML = `<span class="card-symbol">${gameState.topCard.display}</span>`;
+            
+            const colorNames = { 'Red': 'အနီ', 'Blue': 'အပြာ', 'Green': 'အစိမ်း', 'Yellow': 'အဝါ' };
+            const bgColors = { 'Red': '#ef4444', 'Blue': '#3b82f6', 'Green': '#22c55e', 'Yellow': '#eab308' };
+            const cInd = document.getElementById('color-indicator');
+            cInd.textContent = `အရောင်: ${colorNames[gameState.currentWildColor]}`;
+            cInd.style.backgroundColor = bgColors[gameState.currentWildColor];
+
+            // Show last action message if needed (can be added as a toast, keeping it simple for now)
+
+            // My Area
+            document.getElementById('my-area').className = `bg-gray-800 border-t border-gray-700 p-2 pb-6 transition-all ${myTurn ? 'border-t-2 border-t-green-400 shadow-[0_-5px_15px_rgba(74,222,128,0.2)]' : ''}`;
+            document.getElementById('my-name').textContent = gameState.players[currentUser.uid].name + " (သင်)";
+            document.getElementById('my-count').textContent = `ဖဲချပ်: ${gameState.hands[currentUser.uid].length}`;
+            
+            const handContainer = document.getElementById('my-hand');
+            handContainer.innerHTML = '';
+            
+            gameState.hands[currentUser.uid].forEach(card => {
+                const isValid = isCardValid(card);
+                const cardEl = document.createElement('div');
+                cardEl.className = `uno-card card-${card.color} ${(!myTurn || !isValid) && !gameState.winner ? 'disabled' : ''}`;
+                cardEl.innerHTML = `
+                    <span class="card-symbol">${card.display}</span>
+                    ${card.type.includes('wild') ? '<span class="card-small-text">Color</span>' : ''}
+                `;
+                
+                if (myTurn && isValid && !gameState.winner) {
+                    cardEl.onclick = () => handlePlayCard(card);
+                }
+                handContainer.appendChild(cardEl);
+            });
+
+            // Pass button logic
+            document.getElementById('btn-pass').classList.toggle('hidden', !(myTurn && hasDrawnCardThisTurn));
+        }
+
+        function isCardValid(card) {
+            if (card.color === 'Wild') return true;
+            if (card.color === gameState.currentWildColor) return true;
+            if (card.value === gameState.topCard.value) return true;
+            return false;
+        }
+
+        function getNextTurnIndex(currentIndex, dir, totalPlayers, steps = 1) {
+            // JS modulo bug with negative numbers: ((a % n) + n) % n
+            let next = currentIndex + (dir * steps);
+            return ((next % totalPlayers) + totalPlayers) % totalPlayers;
+        }
+
+        window.handlePlayCard = (card) => {
+            if (card.type === 'wild' || card.type === 'wild+4') {
+                pendingWildCard = card;
+                document.getElementById('color-modal').classList.remove('hidden');
+            } else {
+                executePlayMove(card, card.color);
+            }
+        };
+
+        window.selectWildColor = (color) => {
+            document.getElementById('color-modal').classList.add('hidden');
+            if (pendingWildCard) {
+                executePlayMove(pendingWildCard, color);
+                pendingWildCard = null;
+            }
+        };
+
+        async function executePlayMove(card, chosenColor) {
+            let state = JSON.parse(JSON.stringify(gameState));
+            const numPlayers = state.playerIds.length;
+            
+            // Remove from hand
+            state.hands[currentUser.uid] = state.hands[currentUser.uid].filter(c => c.id !== card.id);
+            state.topCard = card;
+            state.currentWildColor = chosenColor;
+            hasDrawnCardThisTurn = false;
+
+            let steps = 1; // Default next player
+
+            // Special Cards Logic
+            if (card.type === 'reverse') {
+                if (numPlayers === 2) {
+                    steps = 2; // Acts like skip in 2-player
+                } else {
+                    state.direction *= -1; // Reverse flow
+                }
+            } 
+            else if (card.type === 'skip') {
+                steps = 2;
+            }
+            else if (card.type === '+2') {
+                let targetIdx = getNextTurnIndex(state.turnIndex, state.direction, numPlayers, 1);
+                let targetId = state.playerIds[targetIdx];
+                for(let i=0; i<2; i++) {
+                    if(state.deck.length > 0) state.hands[targetId].push(state.deck.pop());
+                }
+                steps = 2; // Skip the player who drew
+            }
+            else if (card.type === 'wild+4') {
+                let targetIdx = getNextTurnIndex(state.turnIndex, state.direction, numPlayers, 1);
+                let targetId = state.playerIds[targetIdx];
+                for(let i=0; i<4; i++) {
+                    if(state.deck.length > 0) state.hands[targetId].push(state.deck.pop());
+                }
+                steps = 2;
+            }
+
+            // Win check
+            if (state.hands[currentUser.uid].length === 0) {
+                state.winner = currentUser.uid;
+                state.status = 'finished';
+            } else {
+                // Next turn
+                state.turnIndex = getNextTurnIndex(state.turnIndex, state.direction, numPlayers, steps);
+            }
+
+            if (state.deck.length < 5) state.deck = [...generateDeck(), ...state.deck];
+
+            await setDoc(getRoomRef(currentRoomId), state);
+        }
+
+        window.drawCard = async () => {
+            if (gameState.winner) return;
+            if (gameState.playerIds[gameState.turnIndex] !== currentUser.uid) return showAlert("စောင့်ပါ", "သင့်အလှည့် မဟုတ်သေးပါ။");
+            if (hasDrawnCardThisTurn) return showAlert("အသိပေးချက်", "ဆွဲပြီးသားပါ။ ချစရာမရှိရင် 'မချတော့ပါ' ကိုနှိပ်ပါ။");
+            
+            let state = JSON.parse(JSON.stringify(gameState));
+            
+            if (state.deck.length > 0) {
+                state.hands[currentUser.uid].push(state.deck.pop());
+                hasDrawnCardThisTurn = true; // Mark as drawn, don't change turn yet (allow pass or play)
+                await setDoc(getRoomRef(currentRoomId), state);
+            }
+        };
+
+        window.passTurn = async () => {
+            let state = JSON.parse(JSON.stringify(gameState));
+            hasDrawnCardThisTurn = false;
+            state.turnIndex = getNextTurnIndex(state.turnIndex, state.direction, state.playerIds.length, 1);
+            await setDoc(getRoomRef(currentRoomId), state);
+        };
+
+        window.showAlert = (title, text) => {
+            document.getElementById('alert-title').textContent = title;
+            document.getElementById('alert-text').textContent = text;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        };
+
+        // Event Listeners
+        document.getElementById('btn-create-room').addEventListener('click', createRoom);
+        document.getElementById('btn-join-room').addEventListener('click', joinRoom);
+        document.getElementById('btn-start-game').addEventListener('click', startGame);
+
     </script>
 </body>
 </html>
+
+```
